@@ -1,22 +1,26 @@
 {
-  "input_dir": "C:/Users/Krantz/Island_Köln/WP1a/Vokalannotationen_tief",
-  "output_dir": "C:/Users/Krantz/sciebo/SFB/Phase 3/WP1A A06-III/Vokalannotationen",
-  "output_file": "VQ_Daten_final2.xlsx",
-  "participant_metadata":  "C:/Users/Krantz/sciebo/SFB/Phase 3/WP1A A06-III/Analyse/VQ_Metadaten_mit_Sandalen.csv",
+  "input_dir": "C:/Users/Krantz/Island_Köln/YesNo/test sample D",
+  "pitch_object_path": "C:/Users/Krantz/Island_Köln/YesNo/Getrimmte Audiodateien/Deutsch bereinigt", 
+  "output_dir": "C:/Users/Krantz/Island_Köln/YesNo",
+  "output_file": "VQ_Daten_yesno_D_26_4.xlsx",
+  "participant_metadata":  "C:/Users/Krantz/Island_Köln/YesNo/YesNo Prod Datentabelle D.xlsx",
   "tiers": {
-    "syll_tier": "Silbe",
+    "syll_tier": "ORT-MAU",
     "tobi_tier": "Ton",
     "prominence_tier": "Prominenz",
-    "vowel_tier": "Vokal"
+    "segment_tier": "target_tier"
   },
   "targets": {
-    "target_syll": "o2",
-    "target_vowel": ["a", "u", "y", "o", "e"]
+    "target_syll": ["ja", "nee", "jawel", "doch", "nein"],
+    "target_segment": ["e:", "aː", "eː", "a:", "a", "aɪ", "ɔ"]
   },
   
   "toggles": {
     "get_metadata": false,
+    "first_instance_only": true,
     "extract_formants": true,
+    "use_separate_pitch_object": true,
+    "extract_rms_amplitude": true,
     "extract_HNR": true,
     "extract_Jitter": true,
     "extract_Shimmer": true,

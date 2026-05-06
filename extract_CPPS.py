@@ -2,8 +2,8 @@ from parselmouth import praat
 
 def extract_CPPS_function(sound, timestamps):
     
-    start = timestamps[0]["start"]
-    end = timestamps[0]["end"]
+    start = timestamps[0]["seg_start"]
+    end = timestamps[0]["seg_end"]
     v_obj = sound.extract_part(start, end, preserve_times=True)
 
     

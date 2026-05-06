@@ -1,18 +1,9 @@
 from parselmouth import praat
-from helper import get_gender
 
-def extract_shimmer_function(sound, timestamps, metadata):
-    gender = get_gender(metadata)
-    
-    if gender == "m":
-        pitch_floor, pitch_ceiling = 60, 300
-    else:
-        pitch_floor, pitch_ceiling = 100, 500
-    pitch_obj = sound.to_pitch_cc(pitch_floor = pitch_floor, pitch_ceiling = pitch_ceiling)
+def extract_shimmer_function(pitch_obj, sound, timestamps):
 
-
-    start = timestamps[0]["start"]
-    end = timestamps[0]["end"]
+    start = timestamps[0]["seg_start"]
+    end = timestamps[0]["seg_end"]
     v_obj = sound.extract_part(start, end, preserve_times=True)
 
     min_f0 = float(praat.call(pitch_obj, "Get minimum", start, end, "Hertz", "parabolic"))

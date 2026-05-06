@@ -1,15 +1,16 @@
 import chardet
+import pandas as pd
 import tgt
 from parselmouth import praat
 import math
 import codecs
+import unicodedata
 #---#
 
 def detect_encoding_function(textgrid_file, read_bytes=20000):
     """Try to detect encoding robustly using BOM check, chardet."""
     with open(textgrid_file, "rb") as fh:
         raw = fh.read(read_bytes)
-
     # BOM-based quick checks
     if raw.startswith(codecs.BOM_UTF8):
         return "utf-8-sig"
@@ -24,7 +25,15 @@ def detect_encoding_function(textgrid_file, read_bytes=20000):
 
 #---#
 
-def extract_timestamps_function(input_dir, textgrid_file, vowel_tier, target_vowel):
+def extract_timestamps_function(input_dir, textgrid_file, segment_tier, target_vowel, syll_tier=None, first_only=False):
+
+    """Extract timestamps from segment and syllable tiers in a TextGrid.
+
+    - Handles both IntervalTier (uses interval.start_time/end_time) and PointTier (creates a small window around the point).
+    - target_vowel may be a string or a list of strings; matching is case-insensitive exact match after strip().
+    - If syll_tier is provided, also extracts syllable boundaries that align with segment timestamps.
+    - If first_only is True, returns as soon as the first matching item is found.
+    """
 
     timestamps = []
     file_encoding = detect_encoding_function(textgrid_file)  
@@ -40,21 +49,100 @@ def extract_timestamps_function(input_dir, textgrid_file, vowel_tier, target_vow
         print(f"ERROR: Failed to read {textgrid_file.name} with encoding {file_encoding}: {e}")
         return []
 
-    if vowel_tier not in [tier.name for tier in textgrid.tiers]:
-        print(f"WARNING: Tier '{vowel_tier}' not found in {textgrid_file.name}")
+    # Match tier names case-insensitively and strip whitespace
+    tier_names = [tier.name for tier in textgrid.tiers]
+    lower_to_tier = {tier.name.strip().lower(): tier for tier in textgrid.tiers}
+    
+    # Get segment tier
+    requested_seg = segment_tier.strip().lower()
+    if requested_seg in lower_to_tier:
+        segment_data = lower_to_tier[requested_seg]
+    else:
+        print(f"WARNING: Tier '{segment_tier}' not found in {textgrid_file.name}. Available tiers: {tier_names}")
         return []
+    
+    # Get syllable tier if provided
+    syllable_data = None
+    if syll_tier:
+        requested_syll = syll_tier.strip().lower()
+        if requested_syll in lower_to_tier:
+            syllable_data = lower_to_tier[requested_syll]
+        else:
+            print(f"WARNING: Syllable tier '{syll_tier}' not found in {textgrid_file.name}")
 
-    syll_data = textgrid.get_tier_by_name(vowel_tier)
+    # Normalize targets to a lower-case set for fast membership tests (unicode-normalized)
+    def _norm(s):
+        return unicodedata.normalize("NFC", str(s).strip()).lower()
 
-    for interval in syll_data.intervals:
-        interval_vowel = interval.text.strip().lower()
-        if interval_vowel in [v.lower() for v in target_vowel]:    
-            entry = {
-                "start": interval.start_time,
-                "end": interval.end_time,
-                "duration": interval.end_time - interval.start_time
-            }
-            timestamps.append(entry)
+    if isinstance(target_vowel, (list, tuple)):
+        target_set = {_norm(t) for t in target_vowel}
+    else:
+        target_set = {_norm(target_vowel)}
+
+    # If it's an interval-tier, iterate intervals
+    if hasattr(segment_data, 'intervals'):
+        for interval in segment_data.intervals:
+            interval_label = _norm(interval.text or "")
+            # debug print
+            print(f"interval: {interval.start_time}-{interval.end_time} '{interval_label}'")
+            if interval_label in target_set:
+                entry = {
+                    "seg_start": interval.start_time,
+                    "seg_end": interval.end_time,
+                    "seg_duration": interval.end_time - interval.start_time
+                }
+                
+                # If syllable tier is available, find overlapping syllable boundaries
+                if syllable_data and hasattr(syllable_data, 'intervals'):
+                    for syll_interval in syllable_data.intervals:
+                        # Check if syllable overlaps with segment
+                        if syll_interval.start_time < interval.end_time and syll_interval.end_time > interval.start_time:
+                            entry["syll_start"] = syll_interval.start_time
+                            entry["syll_end"] = syll_interval.end_time
+                            entry["syll_duration"] = syll_interval.end_time - syll_interval.start_time
+                            break  # Take the first overlapping syllable
+                
+                timestamps.append(entry)
+                if first_only:
+                    return timestamps
+
+    # If it's a point-tier, treat each point as a small interval (window)
+    if hasattr(segment_data, 'points'):
+        # default window half-width in seconds around the point
+        window = 0.02
+        for point in segment_data.points:
+            mark = _norm(point.mark or "")
+            # debug
+            # print(f"point: {point.time} '{mark}'")
+            if mark in target_set:
+                start = max(0.0, point.time - window)
+                end = point.time + window
+                entry = {"seg_start": start, "seg_end": end, "seg_duration": end - start}
+                
+                # If syllable tier is available, find overlapping syllable boundaries
+                if syllable_data and hasattr(syllable_data, 'intervals'):
+                    for syll_interval in syllable_data.intervals:
+                        # Check if syllable overlaps with point window
+                        if syll_interval.start_time < end and syll_interval.end_time > start:
+                            entry["syll_start"] = syll_interval.start_time
+                            entry["syll_end"] = syll_interval.end_time
+                            entry["syll_duration"] = syll_interval.end_time - syll_interval.start_time
+                            break  # Take the first overlapping syllable
+                
+                timestamps.append(entry)
+                if first_only:
+                    return timestamps
+
+    if not timestamps:
+        # collect a short sample of labels for debugging
+        labels = []
+        if hasattr(segment_data, 'intervals'):
+            for interval in segment_data.intervals[:20]:
+                labels.append(_norm(interval.text or ""))
+        if hasattr(segment_data, 'points') and not labels:
+            for point in segment_data.points[:20]:
+                labels.append(_norm(point.mark or ""))
+        print(f"No matching intervals/points found in tier '{segment_tier}' for targets {target_set} in {textgrid_file.name}. Sample labels: {labels}")
 
     return timestamps
 
@@ -92,15 +180,33 @@ def db_to_lin_amp(db):
 #---#
 
 def get_gender(metadata):
-    speaker_name = metadata.get("Filename", None)
-
-    # Look up the sex for that speaker
-    row = metadata.loc[metadata["Filename"] == speaker_name, "Sex"]
-
+    # Defensive: handle missing or variant sex column names
+    speaker_name = metadata.get("Audiofile", None)
+    # Find the sex column (case-insensitive)
+    sex_col = None
+    for col in metadata.columns:
+        if str(col).strip().lower() in ["sex", "vp.sex"]:
+            sex_col = col
+            break
+    if sex_col is None:
+        print(f"WARNING: No 'Sex' column (Sex, VP.sex, etc.) found in metadata for {speaker_name}; defaulting to 'f'")
+        return "f"
+    row = metadata.loc[metadata["Audiofile"] == speaker_name, sex_col]
     if not row.empty:
         gender = row.iloc[0]
+        if pd.isna(gender) or str(gender).strip() == "":
+            print(f"WARNING: '{sex_col}' value missing for {speaker_name}; defaulting to 'f'")
+            return "f"
+        gender_str = str(gender).strip().lower()
+        if gender_str in ["m", "male"]:
+            return "m"
+        elif gender_str in ["f", "female"]:
+            return "f"
+        else:
+            print(f"WARNING: Unknown '{sex_col}' value '{gender}' for {speaker_name}; defaulting to 'f'")
+            return "f"
     else:
-        gender = "f"  # default
-    return gender
+        print(f"WARNING: No metadata row for {speaker_name}; defaulting to 'f'")
+        return "f"
 
 #---#

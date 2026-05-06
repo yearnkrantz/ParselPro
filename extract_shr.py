@@ -1,7 +1,4 @@
-from parselmouth import praat
-import math
 import numpy as np
-from helper import db_to_lin_amp
 
 
 
@@ -18,8 +15,8 @@ def extract_shr_function(sound, timestamps, formant_obj, max_formant, time_step=
     """
 
     #get timestamps
-    start = timestamps[0]["start"]
-    end = timestamps[0]["end"]
+    start = timestamps[0]["seg_start"]
+    end = timestamps[0]["seg_end"]
     # get formant object
     formant_obj = sound.to_formant_burg(maximum_formant=max_formant)
     shr_values = []
@@ -46,9 +43,6 @@ def extract_shr_function(sound, timestamps, formant_obj, max_formant, time_step=
             bin_indexf2 = round(bin_floatf2)
             binvalf2 = spectrum.get_value_in_bin(bin_indexf2)
             lin_amp_f2= abs(binvalf2)
-
-
-
 
             if lin_amp_f1 + lin_amp_f2 > 0:
                 shr = 0.5 * ((lin_amp_f1 - lin_amp_f2) / (lin_amp_f1 + lin_amp_f2))
