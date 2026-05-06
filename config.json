@@ -1,0 +1,30 @@
+{
+  "input_dir": "C:/Users/Krantz/Island_Köln/WP1a/Vokalannotationen_tief",
+  "output_dir": "C:/Users/Krantz/sciebo/SFB/Phase 3/WP1A A06-III/Vokalannotationen",
+  "output_file": "VQ_Daten_final2.xlsx",
+  "participant_metadata":  "C:/Users/Krantz/sciebo/SFB/Phase 3/WP1A A06-III/Analyse/VQ_Metadaten_mit_Sandalen.csv",
+  "tiers": {
+    "syll_tier": "Silbe",
+    "tobi_tier": "Ton",
+    "prominence_tier": "Prominenz",
+    "vowel_tier": "Vokal"
+  },
+  "targets": {
+    "target_syll": "o2",
+    "target_vowel": ["a", "u", "y", "o", "e"]
+  },
+  
+  "toggles": {
+    "get_metadata": false,
+    "extract_formants": true,
+    "extract_HNR": true,
+    "extract_Jitter": true,
+    "extract_Shimmer": true,
+    "extract_H1_H2": true,
+    "extract_H1_A3": true,
+    "extract_SHR": true,
+    "extract_CPPS": true
+  }
+  
+}
+
