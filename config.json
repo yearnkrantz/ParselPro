@@ -2,8 +2,8 @@
   "input_dir": "C:/Users/Krantz/Island_Köln/YesNo/test sample D",
   "pitch_object_path": "C:/Users/Krantz/Island_Köln/YesNo/Getrimmte Audiodateien/Deutsch bereinigt", 
   "output_dir": "C:/Users/Krantz/Island_Köln/YesNo",
-  "output_file": "VQ_Daten_yesno_D_26_4.xlsx",
-  "participant_metadata":  "C:/Users/Krantz/Island_Köln/YesNo/YesNo Prod Datentabelle D.xlsx",
+  "output_file": "VQ_Daten_yesno_D_greenlit_df.xlsx",
+  "participant_metadata":  "C:/Users/Krantz/Island_Köln/YesNo/YesNoProdDeutschDaten_hiwi_set.xlsx",
   "tiers": {
     "syll_tier": "ORT-MAU",
     "tobi_tier": "Ton",

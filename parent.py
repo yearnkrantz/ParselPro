@@ -8,7 +8,9 @@ import json
 """
 To run the tool, you first make adjustments in the config file,
 set paths to your input data and where you would like your output to go.
-The variable  
+The variable "syll_tier" is used only to get the syllable duration.
+The variable "segment_tier" is then used for timestamps and parameter extraction.
+Created by Jörn Krantz
 """
 
 # load in the config file
