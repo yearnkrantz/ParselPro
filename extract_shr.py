@@ -1,59 +1,75 @@
+
+import os
+import sys
 import numpy as np
+import parselmouth
+import subprocess
+from parselmouth import praat
 
+# Download opensauce-python from GitHub if not already in CWD
+if not os.path.exists('opensauce-python'):
+   subprocess.call(['git', 'clone', 'https://github.com/voicesauce/opensauce-python.git'])
 
+# # Import the shrp function from opensauce
+opensauce_path = os.path.abspath("./opensauce-python")
+sys.path.insert(0, opensauce_path)
+from opensauce import shrp
 
-def extract_shr_function(sound, timestamps, formant_obj, max_formant, time_step=0.01):
-    """
-    Compute Sun (2002) SHR over [start, end] by calculating SHR per frame.
-    
-    sound       : Parselmouth Sound object
-    start, end  : analysis window
-    time_step   : frame step in seconds (e.g. 0.01 = 10 ms)
-    max_formant : Praat formant ceiling
-    
-    Returns mean SHR across frames
-    """
+# Two settings for SHR Algorithm
+# 1. SHR Adaptive:
+# - min_f0_shr = 0.4 min_pitch
+# - ceiling_shr = 5 * max pitch (< 22100 due to Nyquist)
+# - frame_length_shr = 5000 / min_pitch
 
-    #get timestamps
+# 2. SHR Adaptive 2:
+# - min_f0_shr = 0.4 min_pitch
+# - ceiling_shr = 6 * max pitch (< 22100 due to Nyquist)
+# - frame_length_shr = 10000 / min_pitch
+
+def extract_shr_function(sound, pitch_obj, timestamps):
+    # Load sound and extract pitch
+    #sound = parselmouth.Sound(sound_path)
+    #pitch = sound.to_pitch(
+    #    time_step=0.01,
+    #    pitch_floor=pitch_floor,
+    #    pitch_ceiling=pitch_ceiling
+    #)
+
     start = timestamps[0]["seg_start"]
     end = timestamps[0]["seg_end"]
-    # get formant object
-    formant_obj = sound.to_formant_burg(maximum_formant=max_formant)
-    shr_values = []
+    s_obj = sound.extract_part(start, end, preserve_times=True)
+    # shrp() takes 1D NumPy array
+    y = s_obj.values
+    if y.ndim == 2:
+            if y.shape[0] == 1:
+                y = y[0]
+            else:
+                y = y.mean(axis=0)
+    y = np.asarray(y, dtype=float)
+    fs = s_obj.sampling_frequency
 
-    # iterate over frames
-    t = start
-    while t <= end:
-        f1 = formant_obj.get_value_at_time(1, t)  # F1 at time t
-        f2 = formant_obj.get_value_at_time(2, t)  # F2 at time t
+    # Calculate the 5th and 95th percentile of pitch values for SHR parameter calculation
+    # Just to be conservative and remove outliers
+    fifth_percentile_pitch = praat.call(pitch_obj, "Get quantile", start, end, 0.05, "Hertz")
+    nintyfifth_percentile_pitch = praat.call(pitch_obj, "Get quantile", start, end, 0.95, "Hertz")
 
-        if f1 and f2 and f1 > 0 and f2 > 0:
-            # get amplitude spectrum at that frame
-            frame_sound = sound.extract_part(from_time=t-0.005, to_time=t+0.005, preserve_times=True)  # 10 ms slice
-            spectrum = frame_sound.to_spectrum()
-            
-            # getting linear amplitude for f1
-            bin_floatf1 = spectrum.get_bin_number_from_frequency(f1)
-            bin_indexf1 = round(bin_floatf1)
-            binvalf1 = spectrum.get_value_in_bin(bin_indexf1)
-            lin_amp_f1= abs(binvalf1)
+    # Adaptive SHR parameters based on pitch percentiles
+    # SHR Adaptive 2
+    min_f0_shr = 0.4 * fifth_percentile_pitch
+    max_f0_shr = nintyfifth_percentile_pitch
+    ceiling_shr = min(6 * nintyfifth_percentile_pitch, (fs / 2) - 1)
+    frame_length_shr = 10000 / fifth_percentile_pitch
 
-            # getting linear amplitude for f2
-            bin_floatf2 = spectrum.get_bin_number_from_frequency(f2)
-            bin_indexf2 = round(bin_floatf2)
-            binvalf2 = spectrum.get_value_in_bin(bin_indexf2)
-            lin_amp_f2= abs(binvalf2)
+    f0_time_ms, f0_value, shr_value, f0_candidates = shrp.shrp(
+        Y=y, # Input data (1D NumPy array)
+        Fs=int(fs), # Sampling frequency
+        F0MinMax=[min_f0_shr, max_f0_shr], # F0 range for pitch estimation
+        frame_length=frame_length_shr, # Frame length in ms
+        timestep=5, # Intervals timestep; 5 is chosen in Herbst
+        SHR_Threshold=0.01, #If the estimated SHR is greater than the threshold, the subharmonic is regarded as F0 candidate. Otherwise, the harmonic is favored.
+        ceiling=ceiling_shr, # Upper bound of frequencies for pitch estimation
+        med_smooth=0, # No median smoothing
+        CHECK_VOICING=0 # Not implemented in opensauce-python, set to 0
+    )
 
-            if lin_amp_f1 + lin_amp_f2 > 0:
-                shr = 0.5 * ((lin_amp_f1 - lin_amp_f2) / (lin_amp_f1 + lin_amp_f2))
-                shr_values.append(shr)
-
-        t += time_step
-
-    if len(shr_values) == 0:
-        return float("nan")
-
-    return (np.mean(shr_values)) * 100
-
-
-
+    return f0_time_ms, f0_value, shr_value, f0_candidates

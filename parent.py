@@ -1,4 +1,5 @@
 import parselmouth as pm
+import numpy as np
 from pathlib import Path
 import pandas as pd
 import os
@@ -6,7 +7,7 @@ import json
 
 
 """
-To run the tool, you first make adjustments in the config file,
+To run the tool, you first need to make adjustments in the config file,
 set paths to your input data and where you would like your output to go.
 The variable "syll_tier" is used only to get the syllable duration.
 The variable "segment_tier" is then used for timestamps and parameter extraction.
@@ -174,7 +175,13 @@ for idx, row in metadata.iterrows():
         shimmer = extract_shimmer_function(pitch_obj, sound, timestamps) if config["toggles"]["extract_Shimmer"] else None
         h1_h2 = None
         h1_a3 = None
-        shr = None
+        # We'll compute a single mean SHR value per file (scalar) rather than storing the whole frame-wise array.
+        shr_mean = None
+        # initialize these in case callers expect them later
+        f0_time_ms = None
+        f0_value = None
+        shr_value = None
+        f0_candidates = None
         if config["toggles"]["extract_H1_H2"]:
             h1_h2, ltas_obj, f1_bw, f2_bw, sample_rate, h1_db_c = extract_h1_h2_function(
                 pitch_obj, sound, timestamps, f1, f2, formant_obj
@@ -184,9 +191,21 @@ for idx, row in metadata.iterrows():
                 timestamps, formant_obj, ltas_obj, f1_bw, f2_bw, sample_rate, h1_db_c
             )
         if config["toggles"]["extract_SHR"]:
-            shr = extract_shr_function(sound, timestamps, formant_obj, max_formant)
+            f0_time_ms, f0_value, shr_value, f0_candidates = extract_shr_function(sound, pitch_obj, timestamps)
+            # shr_value is typically a 1D array (frame-wise SHR). Compute its mean; if empty, set to NaN.
+            try:
+                arr = np.asarray(shr_value, dtype=float)
+                if arr.size == 0:
+                    shr_mean = float('nan')
+                else:
+                    shr_mean = float(np.nanmean(arr))
+            except Exception:
+                # If conversion fails, store NaN so downstream code can handle missing values
+                shr_mean = float('nan')
         if config["toggles"]["extract_CPPS"]:
             cpps = extract_CPPS_function(sound, timestamps)
+        else:
+            cpps = None
     except Exception as e:
         errors.append((filename_base, f"Feature extraction failed: {e}"))
         continue
@@ -213,8 +232,8 @@ for idx, row in metadata.iterrows():
         "shimmer": [shimmer if config["toggles"]["extract_Shimmer"] else None],
         "h1_h2": [h1_h2 if config["toggles"]["extract_H1_H2"] else None],
         "h1_a3": [h1_a3 if config["toggles"]["extract_H1_A3"] else None],
-        "shr": [shr if config["toggles"]["extract_SHR"] else None],
-        "CPPS": [cpps] if config["toggles"]["extract_CPPS"] else None
+        "shr": [shr_mean if config["toggles"]["extract_SHR"] else None],
+        "CPPS": [cpps]
     })
 
     results = pd.concat([results, parameter_list], ignore_index=True)
