@@ -1,2 +1,2 @@
-# ParselPro Voice Quality Extractor
+# ParselPro Acoustic and Spectral Parameter Extractor
 This tool is an effort to make many of the functionalities provided by ProsodyPro (Xu, 2013) toggleable and scalable while similarly providing ease of use to researchers who are unfamiliar with python or coding in general. By utilizing either Parselmouth commands directly or calling Praat via Parselmouth, ParselPro combines the versatility of Python with the measure extraction of Prosodypro. 
