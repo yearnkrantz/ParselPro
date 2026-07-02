@@ -1,14 +1,14 @@
 {
-  "input_dir": "C:/Users/Krantz/Island_Köln/YesNo/test sample D",
-  "pitch_object_path": "C:/Users/Krantz/Island_Köln/YesNo/Getrimmte Audiodateien/Deutsch bereinigt", 
-  "output_dir": "C:/Users/Krantz/Island_Köln/YesNo",
-  "output_file": "VQ_Daten_yesno_D_shr_test.xlsx",
+  "input_dir": "C:/path/to/your/input",
+  "pitch_object_path": "C:/where/you/store/your/pitch_objects", 
+  "output_dir": "C:/path/to/your/output",
+  "output_file": "name_of_your_output_file.xlsx",
   "participant_metadata":  "C:/Users/Krantz/Island_Köln/YesNo/YesNoProdDeutschDaten_shr_test.xlsx",
   "tiers": {
-    "syll_tier": "ORT-MAU",
-    "tobi_tier": "Ton",
-    "prominence_tier": "Prominenz",
-    "segment_tier": "target_tier"
+    "syll_tier": "target_syllable",
+    "tobi_tier": "accent_annotation",
+    "prominence_tier": "prominence_annotation",
+    "segment_tier": "target_segment"
   },
   "targets": {
     "target_syll": ["ja", "nee", "jawel", "doch", "nein"],
