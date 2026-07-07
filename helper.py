@@ -179,9 +179,15 @@ def db_to_lin_amp(db):
 
 #---#
 
-def get_gender(metadata):
+def get_gender(metadata, filename_base=None, key_col="Audiofile"):
     # Defensive: handle missing or variant sex column names
-    speaker_name = metadata.get("Audiofile", None)
+    # Detect the actual key column if key_col is not present
+    if key_col not in metadata.columns:
+        for candidate in ("Audiofile", "Filename"):
+            if candidate in metadata.columns:
+                key_col = candidate
+                break
+    speaker_name = filename_base
     # Find the sex column (case-insensitive)
     sex_col = None
     for col in metadata.columns:
@@ -191,7 +197,7 @@ def get_gender(metadata):
     if sex_col is None:
         print(f"WARNING: No 'Sex' column (Sex, VP.sex, etc.) found in metadata for {speaker_name}; defaulting to 'f'")
         return "f"
-    row = metadata.loc[metadata["Audiofile"] == speaker_name, sex_col]
+    row = metadata.loc[metadata[key_col] == speaker_name, sex_col]
     if not row.empty:
         gender = row.iloc[0]
         if pd.isna(gender) or str(gender).strip() == "":

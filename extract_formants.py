@@ -4,11 +4,11 @@ from helper import get_gender
 import json
 from pathlib import Path
 
-def extract_formants_function(sound, timestamps, metadata, filename_base=None):
+def extract_formants_function(sound, timestamps, metadata, filename_base=None, key_col="Audiofile"):
 
 
     # Look up the gender for that speaker
-    gender = get_gender(metadata)
+    gender = get_gender(metadata, filename_base=filename_base, key_col=key_col)
 
 
     # Set max_formant depending on gender

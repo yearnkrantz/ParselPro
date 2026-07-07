@@ -155,7 +155,7 @@ for idx, row in metadata.iterrows():
 
     # Formants
     try:
-        pitch_obj, f1, f2, f3, mean_pitch, mean_pitch_cross_utterance, min_pitch, max_pitch, formant_obj, max_formant = extract_formants_function(sound, timestamps, metadata, filename_base)
+        pitch_obj, f1, f2, f3, mean_pitch, mean_pitch_cross_utterance, min_pitch, max_pitch, formant_obj, max_formant = extract_formants_function(sound, timestamps, metadata, filename_base, key_col=key_name)
     except Exception as e:
         errors.append((filename_base, f"Formant extraction failed: {e}"))
         continue
